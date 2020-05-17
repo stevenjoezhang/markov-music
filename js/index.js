@@ -125,14 +125,16 @@ class Instrument {
 	}
 	async note(name, time = 500) {
 		let oscillator = this.AudioContext.createOscillator();
-		//let gainNode = this.AudioContext.createGain();
-		//oscillator.connect(gainNode);
-		//gainNode.connect(this.AudioContext.destination);
+		let gainNode = this.AudioContext.createGain();
+		oscillator.connect(gainNode);
+		gainNode.connect(this.AudioContext.destination);
 		oscillator.type = "sine";
 		oscillator.frequency.value = this.freq[name];
-		//gainNode.gain.setValueAtTime(0, this.AudioContext.currentTime);
-		//gainNode.gain.linearRampToValueAtTime(1, this.AudioContext.currentTime + 0.01);
-		oscillator.connect(this.AudioContext.destination);
+		gainNode.gain.setValueAtTime(0, this.AudioContext.currentTime);
+		gainNode.gain.linearRampToValueAtTime(1, this.AudioContext.currentTime + 0.01);
+		gainNode.gain.setValueAtTime(1, this.AudioContext.currentTime + time / 1500);
+		gainNode.gain.linearRampToValueAtTime(0, this.AudioContext.currentTime + time / 1000);
+		//oscillator.connect(this.AudioContext.destination);
 		oscillator.start(this.AudioContext.currentTime);
 		oscillator.stop(this.AudioContext.currentTime + time / 1000);
 		console.log("START", name, time);
