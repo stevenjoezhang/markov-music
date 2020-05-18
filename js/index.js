@@ -1,6 +1,5 @@
 bsCustomFileInput.init();
 
-let currentMidi = null;
 let player = null;
 const synths = [];
 let parser;
@@ -24,7 +23,7 @@ class MidiParser {
 		// Duration of all supported notes (including dotted notes) relative to sixteenth note
 		const available = [1, 2, 3, 4, 6, 8, 12, 16];
 		const target = time / this.meta.ppq * 4;
-		return available.find(i => i >= target);
+		return available.find(i => i >= target) || 16;
 	}
 	getGroup(tmp, lastTime) {
 		let time = this.getDuration(tmp[0].durationTicks);
@@ -37,7 +36,7 @@ class MidiParser {
 		};
 	}
 	getGroups(track) {
-		let lastTime = 0;
+		let lastTime = track.notes[0].bars;
 		let groups = [];
 		let tmp = [];
 		for (let note of track.notes) {
@@ -160,11 +159,14 @@ class Instrument {
 }
 
 class Player {
-	constructor(notes) {
+	constructor(notes, meta) {
 		this.buffer = notes;
 		this.playing = false;
 		this.instrument = new Instrument();
 		console.log(this.instrument.freq);
+		let { bpm, ts } = meta;
+		let [beatsPerBar, beatUnit] = ts;
+		this.barDuration = 60 / bpm * beatsPerBar * 1000;
 	}
 	async play() {
 		if (this.playing) return;
@@ -173,7 +175,7 @@ class Player {
 			let note = this.buffer.shift();
 			let [notes, time] = note.split("/");
 			notes = notes.replace("(", "").replace(")", "").split(" ");
-			time = 2500 / 16 * time;
+			time = this.barDuration / 16 * time;
 			await this.instrument.chord(notes, time);
 		}
 	}
@@ -210,6 +212,7 @@ function parse(midi) {
 
 document.getElementById("midi-upload-button").addEventListener("click", async () => {
 	let file = document.getElementById("midi-upload").files[0];
+	let currentMidi;
 	if (!file) {
 		//alert("Please choose a MIDI file to upload!");
 		currentMidi = await Midi.fromUrl("/static/Sua.mid");
@@ -235,7 +238,7 @@ document.getElementById("play").addEventListener("click", event => {
 			alert("Please select a track to play!");
 			return;
 		}
-		player = new Player(parser.tracks[index].markov.orig);
+		player = new Player(parser.tracks[index].markov.orig, parser.meta);
 		player.play();
 		target.innerText = "Pause";
 	}
