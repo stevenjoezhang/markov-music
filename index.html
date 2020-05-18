@@ -36,12 +36,41 @@
 				</div>
 			</div>
 			<div class="col-md-12 mt-4">
-				<button type="button" class="btn btn-primary btn-lg btn-block" id="play" disabled="disabled">Play</button>
-			</div>
-			<div class="col-md-12 mt-4">
-				<div class="alert alert-success" role="alert">
+				<div class="alert alert-success mb-0" role="alert">
 					<h4 class="alert-heading">MIDI Header</h4>
 					<p id="header" class="mb-0"></p>
+				</div>
+			</div>
+			<div class="col-md-12 mt-4">
+				<table class="table table-striped" id="track-info">
+					<thead>
+						<tr>
+							<th>Index</th>
+							<th>Name</th>
+							<th>Instrument Name</th>
+							<th>Instrument Family</th>
+							<th>Select</th>
+						</tr>
+					</thead>
+					<tbody></tbody>
+				</table>
+			</div>
+			<div class="col-md-12 mt-4">
+				<div class="alert alert-primary mb-0" role="alert">
+					<h4 class="alert-heading">Track selector</h4>
+					<div class="form-row">
+						<div class="col-md-4">
+							<select class="custom-select" id="track-select">
+								<option selected>Select a track</option>
+							</select>
+						</div>
+						<div class="col-md-4">
+							<button type="button" class="btn btn-primary btn-block" id="play" disabled="disabled">Play</button>
+						</div>
+						<div class="col-md-4">
+							<button type="button" class="btn btn-success btn-block" id="play" disabled="disabled">Generate</button>
+						</div>
+					</div>
 				</div>
 			</div>
 		</section>

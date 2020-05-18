@@ -49,7 +49,8 @@ class MidiParser {
 			}
 		}
 		groups.push(this.getGroup(tmp, lastTime));
-		return { groups };
+		track.groups = groups;
+		return track;
 	}
 }
 
@@ -164,6 +165,24 @@ function parse(midi) {
 	let { meta, tracks } = parser;
 	let { ppq, bpm, ts } = meta;
 	document.getElementById("header").innerHTML = `ppq: ${ppq} bpm: ${bpm} timeSignature: ${ts}<br>${tracks.length} tracks found.`;
+	let tbody = document.querySelector("#track-info tbody");
+	let select = document.querySelector("#track-select");
+	tbody.innerHTML = "";
+	select.innerHTML = `<option value="-1" selected>Select a track</option>`;
+	tracks.forEach((track, index) => {
+		tbody.innerHTML += `<tr>
+			<td>${index}</td>
+			<td>${track.name}</td>
+			<td>${track.instrument.name}</td>
+			<td>${track.instrument.family}</td>
+			<td>
+				<label>
+					<input type="checkbox" checked="true">
+				</label>
+			</td>
+		</tr>`;
+		select.innerHTML += `<option value="${index}">${track.name}</option>`;
+	});
 }
 
 document.getElementById("midi-upload-button").addEventListener("click", async () => {
@@ -188,33 +207,27 @@ document.getElementById("play").addEventListener("click", event => {
 		playing = false;
 		target.innerText = "Play";
 	} else {
+		let index = parseInt(document.querySelector("#track-select").value, 10);
+		if (index === -1) {
+			alert("Please select a track to play!");
+			return;
+		}
+		play(index);
 		playing = true;
 		target.innerText = "Pause";
-		play(1);
 	}
 	target.classList.toggle("btn-primary");
 	target.classList.toggle("btn-danger");
-	console.log(parser.tracks[2].markov.chain);
-	console.log(new Instrument().freq);
-	return;
 });
 
-async function play(orig) {
+async function play(index) {
 	let ins = new Instrument();
-	if (orig) {
-		for (let note of parser.tracks[2].markov.orig) {
-			let [notes, time] = note.split("/");
-			notes = notes.replace("(", "").replace(")", "").split(" ");
-			time = 2500 / 16 * time;
-			await ins.chord(notes, time);
-		}
-	} else {
-		for (let index of parser.tracks[2].markov.chain) {
-			let note = parser.tracks[2].markov.set[index];
-			let [notes, time] = note.split("/");
-			notes = notes.replace("(", "").replace(")", "").split(" ");
-			time = 2500 / 16 * time;
-			await ins.chord(notes, time);
-		}
+	console.log(parser.tracks[index].markov.chain);
+	console.log(new Instrument().freq);
+	for (let note of parser.tracks[index].markov.orig) {
+		let [notes, time] = note.split("/");
+		notes = notes.replace("(", "").replace(")", "").split(" ");
+		time = 2500 / 16 * time;
+		await ins.chord(notes, time);
 	}
 }
