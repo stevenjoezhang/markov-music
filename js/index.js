@@ -1,7 +1,7 @@
 bsCustomFileInput.init();
 
 let currentMidi = null;
-let playing = false;
+let player = null;
 const synths = [];
 let parser;
 
@@ -159,6 +159,29 @@ class Instrument {
 	}
 }
 
+class Player {
+	constructor(notes) {
+		this.buffer = notes;
+		this.playing = false;
+		this.instrument = new Instrument();
+		console.log(this.instrument.freq);
+	}
+	async play() {
+		if (this.playing) return;
+		this.playing = true;
+		while (this.buffer.length && this.playing) {
+			let note = this.buffer.shift();
+			let [notes, time] = note.split("/");
+			notes = notes.replace("(", "").replace(")", "").split(" ");
+			time = 2500 / 16 * time;
+			await this.instrument.chord(notes, time);
+		}
+	}
+	pause() {
+		this.playing = false;
+	}
+}
+
 function parse(midi) {
 	parser = new MidiParser(midi);
 	document.getElementById("play").removeAttribute("disabled");
@@ -203,8 +226,8 @@ document.getElementById("midi-upload-button").addEventListener("click", async ()
 
 document.getElementById("play").addEventListener("click", event => {
 	let target = event.currentTarget;
-	if (playing) {
-		playing = false;
+	if (player && player.playing) {
+		player.pause();
 		target.innerText = "Play";
 	} else {
 		let index = parseInt(document.querySelector("#track-select").value, 10);
@@ -212,22 +235,10 @@ document.getElementById("play").addEventListener("click", event => {
 			alert("Please select a track to play!");
 			return;
 		}
-		play(index);
-		playing = true;
+		player = new Player(parser.tracks[index].markov.orig);
+		player.play();
 		target.innerText = "Pause";
 	}
 	target.classList.toggle("btn-primary");
 	target.classList.toggle("btn-danger");
 });
-
-async function play(index) {
-	let ins = new Instrument();
-	console.log(parser.tracks[index].markov.chain);
-	console.log(new Instrument().freq);
-	for (let note of parser.tracks[index].markov.orig) {
-		let [notes, time] = note.split("/");
-		notes = notes.replace("(", "").replace(")", "").split(" ");
-		time = 2500 / 16 * time;
-		await ins.chord(notes, time);
-	}
-}
