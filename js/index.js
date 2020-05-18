@@ -1,6 +1,7 @@
 bsCustomFileInput.init();
 
 let currentMidi = null;
+let playing = false;
 const synths = [];
 let parser;
 
@@ -9,11 +10,11 @@ class MidiParser {
 		this.midi = midi;
 		let { header, tracks } = this.midi;
 		let { tempos, timeSignatures } = header;
-		//let { bpm } = tempos[0];
-		//let [beatsPerBar, beatUnit] = timeSignatures[0].timeSignature;
-		//let barDuration = 60 / bpm * beatsPerBar;
-		//let lastBar = 0;
-		this.ppq = header.ppq;
+		this.meta = {
+			ppq: header.ppq,
+			bpm: tempos[0].bpm,
+			ts : timeSignatures[0].timeSignature
+		};
 		this.tracks = tracks.map(track => this.getGroups(track));
 		this.tracks.forEach(track => {
 			track.markov = new Markov(track.groups);
@@ -22,7 +23,7 @@ class MidiParser {
 	getDuration(time) {
 		// Duration of all supported notes (including dotted notes) relative to sixteenth note
 		const available = [1, 2, 3, 4, 6, 8, 12, 16];
-		const target = time / this.ppq * 4;
+		const target = time / this.meta.ppq * 4;
 		return available.find(i => i >= target);
 	}
 	getGroup(tmp, lastTime) {
@@ -157,27 +158,42 @@ class Instrument {
 	}
 }
 
-document.getElementById("midi-upload-button").addEventListener("click", () => {
+function parse(midi) {
+	parser = new MidiParser(midi);
+	document.getElementById("play").removeAttribute("disabled");
+	let { meta, tracks } = parser;
+	let { ppq, bpm, ts } = meta;
+	document.getElementById("header").innerHTML = `ppq: ${ppq} bpm: ${bpm} timeSignature: ${ts}<br>${tracks.length} tracks found.`;
+}
+
+document.getElementById("midi-upload-button").addEventListener("click", async () => {
 	let file = document.getElementById("midi-upload").files[0];
 	if (!file) {
-		alert("Please choose a MIDI file to upload!");
+		//alert("Please choose a MIDI file to upload!");
+		currentMidi = await Midi.fromUrl("/static/Sua.mid");
+		parse(currentMidi);
 		return;
 	}
 	const reader = new FileReader();
 	reader.onload = function(e) {
 		currentMidi = new Midi(e.target.result);
-		//document.querySelector("#ResultsText").value = JSON.stringify(midi, undefined, 2);
-		//document.querySelector("tone-play-toggle").removeAttribute("disabled");
+		parse(currentMidi);
 	}
 	reader.readAsArrayBuffer(file);
 });
 
-document.getElementById("play").addEventListener("click", async () => {
-	let playing = true;
-	if (!currentMidi) {
-		currentMidi = await Midi.fromUrl("/static/Sua.mid");
+document.getElementById("play").addEventListener("click", event => {
+	let target = event.currentTarget;
+	if (playing) {
+		playing = false;
+		target.innerText = "Play";
+	} else {
+		playing = true;
+		target.innerText = "Pause";
+		play(1);
 	}
-	parser = new MidiParser(currentMidi);
+	target.classList.toggle("btn-primary");
+	target.classList.toggle("btn-danger");
 	console.log(parser.tracks[2].markov.chain);
 	console.log(new Instrument().freq);
 	return;
