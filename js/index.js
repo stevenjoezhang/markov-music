@@ -4,6 +4,11 @@ let player = null;
 const synths = [];
 let parser;
 
+const CONST = {
+	available: [1, 2, 3, 4, 6, 8, 12, 16],
+	pitch: ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+}
+
 class MidiParser {
 	constructor(midi) {
 		this.midi = midi;
@@ -21,7 +26,7 @@ class MidiParser {
 	}
 	getDuration(time) {
 		// Duration of all supported notes (including dotted notes) relative to sixteenth note
-		const available = [1, 2, 3, 4, 6, 8, 12, 16];
+		const { available } = CONST;
 		const target = time / this.meta.ppq * 4;
 		return available.find(i => i >= target) || 16;
 	}
@@ -108,28 +113,28 @@ class Markov {
 
 class Instrument {
 	constructor() {
-		this.pitch = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+		const { pitch } = CONST;
 		this.standard = {
 			pitch : "A",
 			octave: 4,
 			freq  : 440
 		};
 		this.freq = {};
-		for (let octave = 1; octave <= 8; octave++) {
+		for (let octave = 0; octave <= 8; octave++) {
 			let deltaOctave = octave - this.standard.octave;
 			for (let index = 0; index < 12; index++) {
-				let offset = index - this.pitch.indexOf(this.standard.pitch);
-				this.freq[this.pitch[index] + octave] = this.standard.freq * Math.pow(2, deltaOctave) * Math.pow(2, offset / 12);
+				let offset = index - pitch.indexOf(this.standard.pitch);
+				this.freq[pitch[index] + octave] = this.standard.freq * Math.pow(2, deltaOctave) * Math.pow(2, offset / 12);
 			}
 		}
 		this.AudioContext = new (window.AudioContext || window.webkitAudioContext);
 	}
-	async note(name, time = 500) {
+	async note(name, time = 500, type = "triangle") {
 		let oscillator = this.AudioContext.createOscillator();
 		let gainNode = this.AudioContext.createGain();
 		oscillator.connect(gainNode);
 		gainNode.connect(this.AudioContext.destination);
-		oscillator.type = "sine";
+		oscillator.type = type;
 		oscillator.frequency.value = this.freq[name];
 		gainNode.gain.setValueAtTime(0, this.AudioContext.currentTime);
 		gainNode.gain.linearRampToValueAtTime(1, this.AudioContext.currentTime + 0.01);
@@ -147,8 +152,8 @@ class Instrument {
 			}, time);
 		});
 	}
-	async chord(names, time = 500) {
-		return Promise.all(names.map(name => this.note(name, time)));
+	async chord(names, time = 500, type) {
+		return Promise.all(names.map(name => this.note(name, time, type)));
 	}
 	async test() {
 		await this.note("C4");
@@ -160,7 +165,7 @@ class Instrument {
 
 class Player {
 	constructor(notes, meta) {
-		this.buffer = notes;
+		this.buffer = [...notes];
 		this.playing = false;
 		this.instrument = new Instrument();
 		console.log(this.instrument.freq);
@@ -175,12 +180,62 @@ class Player {
 			let note = this.buffer.shift();
 			let [notes, time] = note.split("/");
 			notes = notes.replace("(", "").replace(")", "").split(" ");
-			time = this.barDuration / 16 * time;
+			time *= this.barDuration / 16;
 			await this.instrument.chord(notes, time);
 		}
 	}
 	pause() {
 		this.playing = false;
+	}
+}
+
+class MusiXTeX {
+	constructor() {
+		const { available, pitch } = CONST;
+		this.mapping = {
+			1: 'cca',
+			2: 'ca',
+			3: 'cap',
+			4: 'qa',
+			6: 'qap',
+			8: 'ha',
+			12: 'hap',
+			16: 'wa'
+		};
+		const pitches = [
+			char => '‘' + char,
+			char => char,
+			char => '’' + char,
+			char => char.toLowerCase(),
+			char => '’' + char.toLowerCase(),
+			char => '’’' + char.toLowerCase(),
+			char => '’’’' + char.toLowerCase()
+		];
+		this.repr = {};
+		for (let octave = 1; octave <= 7; octave++) {
+			for (let index = 0; index < 7; index++) {
+				let char = String.fromCharCode(65 + index);
+				let level = index < 2 ? octave - 1 : octave;
+				this.repr[char + level] = pitches[octave - 1](char);
+				if ('CDFGA'.includes(char)) {
+					this.repr[char + '#' + level] = '^' + pitches[octave - 1](char);
+				}
+			}
+		}
+	}
+	convert(notes) {
+		//parser.tracks[2].markov.orig;
+		let result = notes.map(note => {
+			;
+		}).join('');
+		console.log(`\begin{music}
+\generalmeter{\meterfrac44}
+\parindent0pt
+\startpiece
+\nobarnumbers
+\Notes${result}\en
+\endpiece
+\end{music}`);
 	}
 }
 
@@ -201,9 +256,9 @@ function parse(midi) {
 			<td>${track.instrument.name}</td>
 			<td>${track.instrument.family}</td>
 			<td>
-				<label>
-					<input type="checkbox" checked="true">
-				</label>
+				<div class="form-check">
+					<input class="form-check-input" type="checkbox" checked="true">
+				</div>
 			</td>
 		</tr>`;
 		select.innerHTML += `<option value="${index}">${track.name}</option>`;
