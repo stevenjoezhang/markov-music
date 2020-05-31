@@ -60,8 +60,8 @@ class MidiParser {
 
 class Markov {
 	constructor(groups, order) {
-		this.orig = groups.map(group => group.id);
-		let set = [...new Set(this.orig)];
+		this.orig = groups;
+		let set = [...new Set(groups.map(group => group.id))];
 		let dimension = set.length;
 		this.set = set;
 		this.matrix = new Array(dimension).fill(null).map(() => new Array(dimension).fill(0));
@@ -152,8 +152,8 @@ class Instrument {
 			}, time);
 		});
 	}
-	async chord(names, time = 500, type) {
-		return Promise.all(names.map(name => this.note(name, time, type)));
+	async chord(notes, time = 500, type) {
+		return Promise.all(notes.map(note => this.note(note.name, time, type)));
 	}
 	async test() {
 		await this.note("C4");
@@ -164,8 +164,8 @@ class Instrument {
 }
 
 class Player {
-	constructor(notes, meta) {
-		this.buffer = [...notes];
+	constructor(chords, meta) {
+		this.buffer = [...chords];
 		this.playing = false;
 		this.instrument = new Instrument();
 		console.log(this.instrument.freq);
@@ -177,9 +177,7 @@ class Player {
 		if (this.playing) return;
 		this.playing = true;
 		while (this.buffer.length && this.playing) {
-			let note = this.buffer.shift();
-			let [notes, time] = note.split("/");
-			notes = notes.replace("(", "").replace(")", "").split(" ");
+			let { notes, time } = this.buffer.shift();
 			time *= this.barDuration / 16;
 			await this.instrument.chord(notes, time);
 		}
@@ -191,51 +189,64 @@ class Player {
 
 class MusiXTeX {
 	constructor() {
-		const { available, pitch } = CONST;
 		this.mapping = {
 			1: 'cca',
 			2: 'ca',
-			3: 'cap',
+			3: 'cup',
 			4: 'qa',
 			6: 'qap',
 			8: 'ha',
 			12: 'hap',
-			16: 'wa'
+			16: 'wh'
+		};
+		this.notehead = {
+			1: 'zq',
+			2: 'zq',
+			3: 'zqp',
+			4: 'zq',
+			6: 'zqp',
+			8: 'zh',
+			12: 'zhp',
+			16: 'zw'
 		};
 		const pitches = [
-			char => '‘' + char,
-			char => char,
-			char => '’' + char,
-			char => char.toLowerCase(),
-			char => '’' + char.toLowerCase(),
-			char => '’’' + char.toLowerCase(),
-			char => '’’’' + char.toLowerCase()
+			index => "`" + String.fromCharCode(65 + index),
+			index => String.fromCharCode(65 + index),
+			index => String.fromCharCode(72 + index),
+			index => String.fromCharCode(97 + index),
+			index => String.fromCharCode(104 + index),
+			index => String.fromCharCode(111 + index),
+			index => String.fromCharCode(118 + index)
 		];
 		this.repr = {};
 		for (let octave = 1; octave <= 7; octave++) {
 			for (let index = 0; index < 7; index++) {
 				let char = String.fromCharCode(65 + index);
 				let level = index < 2 ? octave - 1 : octave;
-				this.repr[char + level] = pitches[octave - 1](char);
+				this.repr[char + level] = pitches[octave - 1](index);
 				if ('CDFGA'.includes(char)) {
-					this.repr[char + '#' + level] = '^' + pitches[octave - 1](char);
+					this.repr[char + '#' + level] = '^' + pitches[octave - 1](index);
 				}
 			}
 		}
 	}
-	convert(notes) {
-		//parser.tracks[2].markov.orig;
-		let result = notes.map(note => {
-			;
+	convert(chords) {
+		let result = chords.map(({ notes, time }) => {
+			let last = notes.pop();
+			let output = `\\${this.mapping[time]}{${this.repr[last.name]}}\\en\\setemptybar\\bar\n`;
+			if (notes.length === 0) {
+				return "\\Notes" + output;
+			}
+			return `\\Notes${notes.map(note => `\\${this.notehead[time]}{${this.repr[note.name]}}`).join('')}${output}`;
 		}).join('');
-		console.log(`\begin{music}
-\generalmeter{\meterfrac44}
-\parindent0pt
-\startpiece
-\nobarnumbers
-\Notes${result}\en
-\endpiece
-\end{music}`);
+		console.log(`\\begin{music}
+\\generalmeter{\\meterfrac44}
+\\parindent0pt
+\\startpiece
+\\nobarnumbers
+${result}
+\\endpiece
+\\end{music}`);
 	}
 }
 
