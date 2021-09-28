@@ -16,6 +16,7 @@
     "tone": "14.7.77"
   },
   "devDependencies": {
+    "@rollup/plugin-commonjs": "20.0.0",
     "@rollup/plugin-node-resolve": "13.0.5",
     "rollup": "2.57.0",
     "terser": "5.9.0"
