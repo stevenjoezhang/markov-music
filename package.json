@@ -1,0 +1,23 @@
+{
+  "name": "markov-music",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Markov music generator based on MIDI files",
+  "main": "index.js",
+  "scripts": {
+    "build": "rollup -c rollup.config.js | terser > public/js/bundle.js",
+    "build-dev": "rollup -c rollup.config.js -o public/js/bundle.js -w"
+  },
+  "author": "Mimi <stevenjoezhang@gmail.com> (https://zhangshuqiao.org)",
+  "license": "MIT",
+  "dependencies": {
+    "@tonejs/midi": "2.0.27",
+    "bootstrap": "5.1.1",
+    "tone": "14.7.77"
+  },
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "13.0.5",
+    "rollup": "2.57.0",
+    "terser": "5.9.0"
+  }
+}
