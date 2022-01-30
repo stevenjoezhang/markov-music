@@ -1,3 +1,7 @@
+const { Midi } = require("@tonejs/midi");
+const bsCustomFileInput = require("bs-custom-file-input");
+const MidiParser = require("./midi-parser.js");
+
 bsCustomFileInput.init();
 
 let player = null;
