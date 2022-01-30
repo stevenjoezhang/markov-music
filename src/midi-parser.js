@@ -3,6 +3,7 @@
 class MidiParser {
 	constructor(midi) {
 		this.midi = midi;
+		this.available = [1, 2, 3, 4, 6, 8, 12, 16];
 		let { header, tracks } = this.midi;
 		let { tempos, timeSignatures } = header;
 		this.meta = {
@@ -18,19 +19,30 @@ class MidiParser {
 			console.log(`notes = ${JSON.stringify(allnote)}\nbeats = ${JSON.stringify(alltime)}`);
 		});
 	}
-	getDuration(time) {
+	getDuration(ticks) {
 		// Duration of all supported notes (including dotted notes) relative to sixteenth note
-		const available = [1, 2, 3, 4, 6, 8, 12, 16];
-		const target = time / this.meta.ppq * 4;
-		return available.find(i => i >= target) || 16;
+		const target = ticks / this.meta.ppq * 4;
+		return this.available.find(i => i >= target) || 16;
 	}
 	getGroup(tmp, lastTime) {
-		let time = this.getDuration(tmp[0].durationTicks);
-		let id = `(${tmp.map(note => note.name).join(" ")})/${time}`;
+		const time = this.getDuration(tmp[0].durationTicks);
+		const id = `(${tmp.map(note => note.name).join(" ")})/${time}`;
 		return {
 			notes: tmp,
 			start: lastTime,
 			id,
+			time
+		};
+	}
+	getRest(ticks, lastTime) {
+		const time = this.available.find(i => i >= ticks) || 16;
+		return {
+			notes: [{
+				name: ""
+			}],
+			start: lastTime,
+			// TODO: id for rest
+			id: `()/${time}`,
 			time
 		};
 	}
@@ -39,12 +51,15 @@ class MidiParser {
 		let groups = [];
 		let tmp = [];
 		if (track.notes.length) {
-			let lastTime = track.notes[0].bars;
+			let lastTime = track.notes[0].ticks;
 			for (let note of track.notes) {
-				if (note.bars === lastTime) tmp.push(note);
+				if (note.ticks === lastTime) tmp.push(note);
 				else {
 					groups.push(this.getGroup(tmp, lastTime));
-					lastTime = note.bars;
+					const delta = (note.ticks - lastTime - track.notes[0].durationTicks) / this.meta.ppq * 4;
+					// TODO: threshold greater than 0
+					if (delta > 0) groups.push(this.getRest(delta, note.ticks - delta));
+					lastTime = note.ticks;
 					tmp = [note];
 				}
 			}
