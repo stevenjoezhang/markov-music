@@ -62,7 +62,7 @@ class Markov {
 
 class Instrument {
 	constructor() {
-		const { pitch } = CONST;
+		const pitch = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 		this.standard = {
 			pitch : "A",
 			octave: 4,
@@ -73,7 +73,7 @@ class Instrument {
 			let deltaOctave = octave - this.standard.octave;
 			for (let index = 0; index < 12; index++) {
 				let offset = index - pitch.indexOf(this.standard.pitch);
-				this.freq[pitch[index] + octave] = this.standard.freq * Math.pow(2, deltaOctave) * Math.pow(2, offset / 12);
+				this.freq[pitch[index] + octave] = this.standard.freq * Math.pow(2, deltaOctave + offset / 12);
 			}
 		}
 		this.AudioContext = new (window.AudioContext || window.webkitAudioContext);
@@ -116,13 +116,13 @@ class Player {
 	constructor(chords, meta) {
 		this.buffer = [...chords];
 		this.playing = false;
-		this.instrument = new Instrument();
-		console.log(this.instrument.freq);
 		let { bpm, ts } = meta;
 		let [beatsPerBar, beatUnit] = ts;
 		this.barDuration = 60 / bpm * beatsPerBar * 1000;
 	}
 	async play() {
+		this.instrument = new Instrument();
+		console.log(this.instrument.freq);
 		if (this.playing) return;
 		this.playing = true;
 		while (this.buffer.length && this.playing) {
@@ -130,6 +130,7 @@ class Player {
 			time *= this.barDuration / 16;
 			await this.instrument.chord(notes, time);
 		}
+		this.instrument = null;
 	}
 	pause() {
 		this.playing = false;
