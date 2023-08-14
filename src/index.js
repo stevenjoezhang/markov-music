@@ -79,6 +79,15 @@ class Instrument {
 		this.AudioContext = new (window.AudioContext || window.webkitAudioContext);
 	}
 	async note(name, time = 500, type = "triangle") {
+		if (!name) {
+			console.log("START", "REST", time);
+			return new Promise((resolve, reject) => {
+				setTimeout(() => {
+					console.log("STOP", "REST", time);
+					resolve();
+				}, time);
+			});
+		}
 		let oscillator = this.AudioContext.createOscillator();
 		let gainNode = this.AudioContext.createGain();
 		oscillator.connect(gainNode);
@@ -231,7 +240,7 @@ document.getElementById("midi-upload-button").addEventListener("click", async ()
 	let currentMidi;
 	if (!file) {
 		//alert("Please choose a MIDI file to upload!");
-		currentMidi = await Midi.fromUrl("/static/Sua.mid");
+		currentMidi = await Midi.fromUrl("static/Sua.mid");
 		parse(currentMidi);
 		return;
 	}
@@ -254,7 +263,7 @@ document.getElementById("play").addEventListener("click", event => {
 			alert("Please select a track to play!");
 			return;
 		}
-		player = new Player(parser.tracks[index].markov.orig, parser.meta);
+		player = new Player(parser.tracks[index].groups, parser.meta);
 		player.play();
 		target.innerText = "Pause";
 	}
